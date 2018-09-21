@@ -14,7 +14,7 @@ for spi = 1:nClasses
 end
 
 %Generate weights based on distance in feature space
-fsdist_w = 1./eq_dists.^3;
+fsdist_w = 1./eq_dists.^4;
 fsdist_w = fsdist_w ./ repmat(sum(fsdist_w, 2), [1, nClasses*Kfs]);
 
 %Calculate posterior probability (class given observation)
@@ -22,7 +22,7 @@ pP = zeros(size(nb_classes, 1), nClasses);
 for sp_i = 1:size(pP, 1)
   for cl_i = 1:nClasses
     clw = fsdist_w(sp_i,(1+(cl_i-1)*Kfs):cl_i*Kfs);
-    pP(sp_i, cl_i) = sum(clw)/sum(fsdist_w(sp_i,:)); 
+    pP(sp_i, cl_i) = sum(clw);%/sum(fsdist_w(sp_i,:)); 
   end
 end
 scores = pP;

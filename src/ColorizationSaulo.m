@@ -3,6 +3,7 @@
 % Author: Saulo Pereira
 %-------------------------------------------------------------------
 input_file = 'default';
+clearvars -except batch_out;
 
 %% Input parameters
 [IP, FP, OO] = InputAlgorithmParameters(input_file);
@@ -69,40 +70,23 @@ if (OO.PLOT && ~IP.SUPERPIXEL)
 end
 
 %% Feature extraction
-%TODO: save the activation vector to compare
-if (sum(FP.features == 1) == length(FP.features))
-  dataName = IP.sourceFile(1:end-2-3);
-  
-  try
-    disp('Feature loading (try)'); tic;
+dataName = IP.sourceFile(1:end-2-3);
 
-    load(['./../temp/' dataName '_full']);
-    toc;
-  catch
-    disp('Feature extraction'); tic;
+try
+  disp('Feature loading (try)'); tic;
 
-    [target_fv, target_fvl] = FeatureExtraction(target.luminance, FP);
-    [samples_fv, samples_fvl] = FeatureExtraction(source.luminance, FP);
-    toc;
+  load(['./../temp/' dataName '_full']);
+  toc;
+catch
+  disp('Feature extraction'); tic;
 
-    save(['./../temp/' dataName '_full'], 'target_fv', 'samples_fv', 'target_fvl', 'samples_fvl');
-  end
-else
-  try
-    disp('Feature loading (try)'); tic;
+  [target_fv, target_fvl] = FeatureExtraction(target.luminance, FP);
+  [samples_fv, samples_fvl] = FeatureExtraction(source.luminance, FP);
+  toc;
 
-    load('./../temp/default');
-    toc;
-  catch
-    disp('Feature extraction'); tic;
-
-    [target_fv, target_fvl] = FeatureExtraction(target.luminance, FP);
-    [samples_fv, samples_fvl] = FeatureExtraction(source.luminance, FP);
-    toc;
-
-    save('./../temp/default', 'target_fv', 'samples_fv', 'target_fvl', 'samples_fvl');
-  end
+  save(['./../temp/' dataName '_full'], 'target_fv', 'samples_fv', 'target_fvl', 'samples_fvl');
 end
+
 %Source Sampling
 idxs = sub2ind(size(source.luminance), samples.idxs(1,:), samples.idxs(2,:));
 %Structs receive values
@@ -113,20 +97,6 @@ target.fvl = target_fvl;
 
 %Clear structured variables
 clear target_fv samples_fv target_fvl samples_fvl;
-
-% Principal components:
-if (IP.DIM_RED)
-  %DEPRECATED
-  disp('Dimensionality Reduction on Feature Space'); tic;
-
-  if (~IP.SUPERPIXEL)
-    [samples.fv, target.fv] = DimensionalityReduction(samples.fv, target.fv, IP.DIM_RED);
-  else
-    [source.fv_sp, target.fv_sp] = ...
-      DimensionalityReduction(source.fv_sp, target.fv_sp, target.fvl, IP.DIM_RED);
-  end
-  toc;
-end
 
 %% Superpixel extraction
 if (IP.SUPERPIXEL)
@@ -180,263 +150,131 @@ if (IP.SUPERPIXEL)
   toc;
   
   %> Saliency Feature Computation
-  if (FP.features(1) || true)
-    [ssi1, ssi2] = SaliencyFeature(source.luminance, source.sp, source.nSuperpixels);
-    [tsi1, tsi2] = SaliencyFeature(target.luminance, target.sp, target.nSuperpixels);
-    
-    %Find unique superpixels indexes and concatenate their saliency values
-    %onto the feature vector.
-    [sp_idxs, src_idxs] = unique(source.lin_sp);
-    [~, tgt_idxs] = unique(target.lin_sp);
-    source.fv_sp = [source.fv_sp; ssi1(src_idxs)'; ssi2(src_idxs)'];
-    target.fv_sp = [target.fv_sp; tsi1(tgt_idxs)'; tsi2(tgt_idxs)'];
-  end
-end
-
-%% Feature Selection
-disp('Feature Selection/Optimization'); tic;
-
-if (false)
-%Feature Space Analysis (Master's Proposal)
-  K = IP.Kfs;
-
-  %>Color space NN approximation:
-  for k = 1:numel(K)
-    [~,medianDists] = FeatureCombinationSearch(source, target, samples, target.fvl, ...
-      clusters.mcCost, IP.nClusters, K(k), 'peaksDist', IP.sourceFile);
-
-    fid = figure;
-    subplot(2,1,1); stem(medianDists(1,:)/source.nSuperpixels, 'filled', 'MarkerSize', 3);
-    title(['nPeaks: Median of distances to ' num2str(K(k)) 'NNs along feature combinations']);
-    subplot(2,1,2); stem(medianDists(1,:)/source.nSuperpixels, 'filled', 'MarkerSize', 3);
-    title(['nPeaks: Distance to color median of ' num2str(K(k)) 'NNs along feature combinations']);
-    print(['./../results/Peaks ' IP.sourceFile], '-dpng'); close(fid);  
-  end
-
-  %>Clustering metrics:
-  for k = 1:numel(K)
-    [~,iiDists] = FeatureCombinationSearch(source, target, samples, target.fvl, ...
-      clusters.mcCost, IP.nClusters, K(k), 'cluster', IP.sourceFile);
-  
-    fid = figure;
-    stem(iiDists(1,:)./iiDists(2,:), 'filled', 'MarkerSize', 3);    
-    title('Intra/Inter distance ratio along feature combinations');
-    print(['./../results/Cluster ' IP.sourceFile], '-dpng'); close(fid);
-  end
-
-  %>Weighted Class Predictions:
-  [~, predLoss] = FeatureCombinationSearch(source, target, samples, target.fvl, ...
-      clusters.mcCost, IP.nClusters, K, 'leaveOneOut', IP.sourceFile);
-  fid = figure;
-  stem(predLoss(1,:), 'filled', 'MarkerSize', 3);
-  title('Predict Leave One Out Loss');
-  print(['./../results/LeaveOut ' IP.sourceFile], '-dpng'); close(fid);
-  
-  %>Definir mais metricas
-  %> FULL FEATURE SET
-  [neighbor_idxs, neighbor_dists] = knnsearch(source.fv_sp', target.fv_sp', ...
-    'K', source.nSuperpixels); % Return all distances for further reference.
-  neighbor_classes = source.sp_clusters(neighbor_idxs);
-  [labels, ~] = PredictSuperpixelsClassesKNN(neighbor_classes, neighbor_dists, IP.Kfs, IP.nClusters, ...
-    clusters.mcCost);
-  tgt_lab = CopyClosestSuperpixelFromClassAvgColor(source, target, neighbor_idxs, ...
-      neighbor_classes, labels, true);
-  target.rgb = lab2rgb(tgt_lab);
-  imwrite(target.rgb, ['./../results/Full ' IP.sourceFile]);
-end
-
-if (false) 
-  featsW = FeatureSelectionOptimization(source, samples, IP.Kfs, clusters.mcCost, IP.FEAT_SEL);
-  %Update the feature vectors
-  source.fv_sp_opt = repmat(featsW, source.nSuperpixels, 1)'.*source.fv_sp;
-  source.fv_sp_opt(featsW==0,:)=[];
-  target.fv_sp_opt = repmat(featsW, target.nSuperpixels, 1)'.*target.fv_sp;
-  target.fv_sp_opt(featsW==0,:)=[];
-end
-toc;
-
-%% Feature space analysis
-
-if (IP.SUPERPIXEL && OO.ANALYSIS)
-  %MOVE TO RELABELING
-  [f_cluster, Cf, ~, Df] = kmeans(source.fv_sp', IP.nClusters, 'Distance', 'sqEuclidean', ...
-                          'Replicates', 5);
-
-  valid_f_cluster = zeros(source.nSuperpixels,1);
-  valid_f_cluster(source.validSuperpixels) = f_cluster;
-  valid_f_cluster(setdiff(1:source.nSuperpixels, source.validSuperpixels)) = -1;
-  src_feat_labels = CreateLabeledImage(valid_f_cluster, source.sp, size(source.luminance));
-
-  figure; imshow([src_col_labels src_feat_labels], []);
-  title('Superpixel Labeling (left: colors, right: features)');
-  colormap jet; drawnow;
-
-  [f_cluster, Cf, ~, Df] = kmeans(target.fv_sp', IP.nClusters, 'Distance', 'sqEuclidean', ...
-                          'Replicates', 5);
-
-  tgt_feat_labels = CreateLabeledImage(f_cluster, target.sp, size(target.luminance));
-
-  figure; imshow(tgt_feat_labels, []);
-  title('Target Superpixel feature clustering');
-  colormap jet; drawnow;
-
-  target.fv_sp_labels = f_cluster;
-end
-
-if (OO.ANALYSIS && IP.COLOR_CLUSTERING)
-  figure(figs.LabelsFS); title('Source: Labeled samples in feature space'); hold on; 
-  figure(figs.LabelsImage); imshow(source.luminance); 
-  title('Source: Labeled samples over image'); hold on;
-
-  if (~IP.SUPERPIXEL)
-    for i = 1:IP.nClusters
-        instances = intersect(find(samples.clusters == i), source.validSuperpixels);
-        figure(figs.LabelsFS); scatter(samples.fv(1,instances), samples.fv(2,instances),'.');
-        figure(figs.LabelsImage); scatter(samples.idxs(2,instances), samples.idxs(1,instances),'.');
-    end
-  else
-    for i = 1:IP.nClusters
-      sp_instances = find(source.sp_clusters == i);
-      figure(figs.LabelsFS); scatter(source.fv_sp(1,sp_instances), source.fv_sp(2,sp_instances), '.');
-    end
-  end
-  figure(figs.LabelsFS); hold off;
-  figure(figs.LabelsImage); hold off; 
-
-  drawnow;
-end
-
-if (OO.ANALYSIS)
-  figure; title('Target: Feature space distribution'); hold on;
-  if (~IP.SUPERPIXEL) 
-      scatter(target.fv(1,:), target.fv(2,:), '.k'); hold off;
-  else
-      scatter(target.fv_sp(1,:), target.fv_sp(2,:), '.k'); hold off;
-  end
+  [ssi1, ssi2] = SaliencyFeature(source.luminance, source.sp, source.nSuperpixels);
+  [tsi1, tsi2] = SaliencyFeature(target.luminance, target.sp, target.nSuperpixels);
+  %Find unique superpixels indexes and concatenate their saliency values
+  %onto the feature vector.
+  [sp_idxs, src_idxs] = unique(source.lin_sp);
+  [~, tgt_idxs] = unique(target.lin_sp);
+  source.fv_sp = [source.fv_sp; ssi1(src_idxs)'; ssi2(src_idxs)'];
+  target.fv_sp = [target.fv_sp; tsi1(tgt_idxs)'; tsi2(tgt_idxs)'];
+  clear ssi1 ssi2 tti1 tti2;
 end
 
 %% Matching / Classification
 disp('Feature matching / Classification in Feature Space'); tic;
 
-if (~IP.SUPERPIXEL && ~IP.CLASSIFICATION)
-  [neighbor_idxs, neighbor_dists] = knnsearch(samples.fv', target.fv'); 
-elseif (~IP.SUPERPIXEL && IP.CLASSIFICATION)    
-  [neighbor_idxs, neighbor_dists] = knnsearch(samples.fv', target.fv', 'K', IP.Kfs);
-  neighbor_classes = samples.lin_idxs(neighbor_idxs,:);
-  neighbor_classes = clusters.idxs(neighbor_classes);
-  neighbor_classes = reshape(neighbor_classes, size(neighbor_idxs,1), size(neighbor_idxs,2));
-
-  labels = mode(neighbor_classes,2);
-elseif (IP.SUPERPIXEL && ~IP.CLASSIFICATION)
-  [neighbor_idxs, neighbor_dists] = knnsearch(source.fv_sp', target.fv_sp');
-elseif (IP.SUPERPIXEL && IP.CLASSIFICATION)
-  [neighbor_idxs, neighbor_dists] = knnsearch(source.fv_sp', target.fv_sp', ...
-    'K', source.nSuperpixels, 'Distance', @FeaturesDistances); % Return all distances for further reference.
-  neighbor_classes = source.sp_clusters(neighbor_idxs);
-
-  labelsKNN = modeTies(neighbor_classes(:,1:IP.Kfs));
-  [labelsPredict, ~] = PredictSuperpixelsClassesKNN(neighbor_classes, neighbor_dists, source.nSuperpixels, IP.nClusters, ...
-    clusters.mcCost, false);
-  [labelsPredictE, scores, costs] = PredictSuperpixelsClassesBalancedKNN(neighbor_classes, neighbor_dists, ...
-    IP.Kfs, IP.nClusters, clusters.mcCost, false);
+%>Feature Space Distance Computation
+PDs = CombinedPDists(source.fv_sp, target.fv_sp, FP.featsWeights);
+neighbor_idxs = zeros(size(PDs));
+neighbor_dists = zeros(size(PDs));
+for i = 1:size(PDs,1)
+  [neighbor_dists(i,:), neighbor_idxs(i,:)] = sort(PDs(i,:));
 end
+clear PDs
 
-if (OO.PLOT && exist('labelsPredict') || true)
-  imgKNN = CreateLabeledImage(labelsKNN, target.sp, size(target.image));
-  imgPredict =  CreateLabeledImage(labelsPredict, target.sp, size(target.image));
-  imgPredicte = CreateLabeledImage(labelsPredictE, target.sp, size(target.image));
+img_gen = {};
+%>Matching:
+[match_idxs, ~] = knnsearch(source.fv_sp', target.fv_sp');
+img_gen{1, 1} = match_idxs;  img_gen{1,2} = 'match_idxs';
 
-  figure; imshow([imgKNN zeros(size(imgKNN));imgPredict imgPredicte], []); colormap jet;
-  title('Predicted labels of each superpixel (left: NN posterior, right: NN mode)');
+%>Classification:
+%Classes assignment
+neighbor_classes = source.sp_clusters(neighbor_idxs);
+
+%kNN
+labelsKNN = modeTies(neighbor_classes(:,1:IP.Kfs));
+img_gen{2,1} = labelsKNN; img_gen{2,2} = 'labelsKNN';
+%Predict Full
+[labelsSPrF, labelsCPrF, doubtsPrF, scoresPrF, costsPrF] = ...
+  PredictSuperpixelsClassesKNN(neighbor_classes, neighbor_dists, 0, IP.nClusters, clusters.mcCost);
+img_gen{3,1} = labelsSPrF; img_gen{3,2} = 'labelsSPrF';
+img_gen{4,1} = labelsCPrF; img_gen{4,2} = 'labelsCPrF';
+%Predict Equality
+[labelsSPrE, labelsCPrE, doubtsPrE, scoresPrE, costsPrE] = ...
+  PredictSuperpixelsClassesKNN(neighbor_classes, neighbor_dists, IP.Kfs, IP.nClusters, clusters.mcCost);
+img_gen{5,1} = labelsSPrE; img_gen{5,2} = 'labelsSPrE';
+img_gen{6,1} = labelsCPrE; img_gen{6,2} = 'labelsCPrE';
+
+if (OO.PLOT)
+  imKNN = CreateLabeledImage(labelsKNN, target.sp, size(target.image));
+  imSPF = CreateLabeledImage(labelsSPrF, target.sp, size(target.image));
+  imDPF = CreateLabeledImage(labelsSPrF.*~doubtsPrF + -1*doubtsPrF, target.sp, size(target.image));
+  imCPF = CreateLabeledImage(labelsCPrF, target.sp, size(target.image));
+  imSPE = CreateLabeledImage(labelsSPrE, target.sp, size(target.image));
+  imDPE = CreateLabeledImage(labelsSPrE.*~doubtsPrE + -1*doubtsPrE, target.sp, size(target.image));
+  imCPE = CreateLabeledImage(labelsCPrE, target.sp, size(target.image));
+
+  figure; imshow([imKNN zeros(size(imKNN)) zeros(size(imKNN));
+                  imSPF imDPF imCPF;
+                  imSPE imDPE imCPE], []); colormap jet;
+  title('Locally assigned labels: [kNN - zeros - zeros] ; [Full > S D C] ; [Equality > S D C]');
+  drawnow;
+  
+  clear imKNN imSPF imDPF imCPF imSPE imDPE imCPE;
 end
-
+ 
 toc;
 
-%% Relabeling
-if (IP.SUPERPIXEL && IP.CLASSIFICATION)
-  disp('Superpixel relabeling'); tic;
+%% Edge-Aware Labeling/Relabeling
+disp('Edge-Aware Labeling/Relabeling'); tic;
 
-  relabels = EdgeAwareRelabeling(target, labelsPredictE, costs);
-  labelsEdgeAware = EdgeAwareRelabeling(target, [], costs);
-
-  if (OO.PLOT || true)
-    ea_labeled_img = CreateLabeledImage(labelsEdgeAware, target.sp, size(target.image));
-    ea_relabeled_img = CreateLabeledImage(relabels, target.sp, size(target.image));
-    
-    figure(100); imshow([ea_relabeled_img ea_labeled_img],[]); colormap jet;
-    title('Edge Aware (Relabeling x Labeling)');
-  end
-  
+try
+    load (['./../temp/' dataName '_eaclusters']);
+    figure(73); imshow(eaClustersImg, []); colormap 'jet'
+catch
+    [eaClusters, eaClustersImg] = EdgeAwareClustering(target);
+    save (['./../temp/' dataName '_eaclusters'], 'eaClusters', 'eaClustersImg');
 end
+
+%Relabeling
+relabelsKNN = EdgeAwareRelabeling(eaClusters, labelsKNN, []);
+relabelsSPrE = EdgeAwareRelabeling(eaClusters, labelsSPrE, []);
+relabelsCPrE = EdgeAwareRelabeling(eaClusters, labelsCPrE, []);
+img_gen{7,1} = relabelsKNN; img_gen{7,2} = 'relabelsKNN';
+img_gen{8,1} = relabelsSPrE; img_gen{8,2} = 'relabelsSPrE';
+img_gen{9,1} = relabelsCPrE; img_gen{9,2} = 'relabelsCPrE';
+
+%Costs Labeling
+labelsEACPrE = EdgeAwareRelabeling(eaClusters, [], costsPrE);
+img_gen{10,1} = labelsEACPrE; img_gen{10,2} = 'labelsEACPrE';
+%Scores Labeling
+labelsEASPrE = EdgeAwareRelabeling(eaClusters, [], scoresPrE);
+img_gen{11,1} = labelsEASPrE; img_gen{11,2} = 'labelsEASPrE';
+
+
+if (OO.PLOT)
+  imKNN = CreateLabeledImage(relabelsKNN, target.sp, size(target.image));
+  imSPE =  CreateLabeledImage(relabelsSPrE, target.sp, size(target.image));
+  imCPE = CreateLabeledImage(relabelsCPrE, target.sp, size(target.image));  
+  imEAPrEc = CreateLabeledImage(labelsEACPrE, target.sp, size(target.image));
+  imEAPrEs = CreateLabeledImage(labelsEASPrE, target.sp, size(target.image));
+  
+  figure; imshow([imKNN imSPE imCPE;
+                  zeros(size(imKNN)) imEAPrEs imEAPrEc], []); colormap jet;
+  title('[Relabels> kNN - SE - CE] ; [EA Labels> - S C]');
+  
+  clear imKNN imSPE imCPE imEAPrEs imEAPrEc;
+end
+
+clear match_idxs labelsKNN labelsPrF labelsPrE;
+clear relabelsKNN relabelsPrF relabelsPrE labelsEAPrFc labelsEAPrEc labelsEAPrFs labelsEAPrEs
 
 %% Color transfer:
-disp('Color transfer'); tic
+disp('Color transfer + Save'); tic
 
-switch IP.COL_METHOD
-  case 0
-    tgt_lab = CopyClosestFeatureColor(samples.ab, target, neighbor_idxs);
-  case 1
-    tgt_lab = CopyClosestFeatureInClassColor(samples.ab, target, neighbor_idxs, neighbor_classes, ...
-      labels);
-  case 2
-    tgt_lab = CopyClosestSuperpixelAvgColor(source, target, neighbor_idxs);
-  case 3
-    tgt_lab = CopyClosestSuperpixelFromClassAvgColor(source, target, neighbor_idxs, ...
-      neighbor_classes, labels);
+[tgt_scribbled, scribbles_mask] = CopyClosestSuperpixelAvgScribble(source, target, img_gen{1,1});
+    tgt_scribbled = lab2rgb(tgt_scribbled);
+target.rgb = ColorPropagationLevin(tgt_scribbled, target.luminance, scribbles_mask);
+imwrite(target.rgb, ['./../results/' batch_out dataName '_' img_gen{1,2} '.png'], 'png');
 
-    %Relabeled
-    tgt_lab_r = CopyClosestSuperpixelFromClassAvgColor(source, target, neighbor_idxs, ...
-      neighbor_classes, relabels);
-  case 4
-    [tgt_scribbled, scribbles_mask] = CopyClosestSuperpixelAvgScribble(source, target, neighbor_idxs);
-    tgt_scribbled = lab2rgb(tgt_scribbled);
-    target.rgb = ColorPropagationLevin(tgt_scribbled, target.luminance, scribbles_mask);  
-  case 5
-    [tgt_scribbled, scribbles_mask] = CopyClosestSuperpixelFromClassScribble(source, target, ...
-      neighbor_idxs, neighbor_classes, relabels);
-    tgt_scribbled = lab2rgb(tgt_scribbled);
-    target.rgb = ColorPropagationLevin(tgt_scribbled, target.luminance, scribbles_mask);
-  otherwise
-    disp('Invalid COL_METHOD');
+for i = 2:length(img_gen)
+  [tgt_scribbled, scribbles_mask] = CopyClosestSuperpixelFromClassScribble(source, target, ...
+      neighbor_idxs, neighbor_classes, img_gen{i,1}, IP.Kfs);
+  tgt_scribbled = lab2rgb(tgt_scribbled);
+  target.rgb = ColorPropagationLevin(tgt_scribbled, target.luminance, scribbles_mask);
+  
+  imwrite(target.rgb, ['./../results/' batch_out dataName '_' img_gen{i,2} '.png'], 'png');
 end
 
 toc;
-
-% Color space reconversion
-%   if (~isfield(target, 'rgb'))
-%     target.rgb = lab2rgb(tgt_lab);
-%   end
-%   if (~isfield(target, 'rgb_r') && exist('tgt_lab_r'))
-%     target.rgb_r = lab2rgb(tgt_lab_r);
-%   end
-
-%% Show results
-if (OO.PLOT)
-  figure; imshow(target.rgb);
-  if(isfield(target, 'rgb_r'))
-    figure; imshow(target.rgb_r); title('Relabeled');
-  end
-end
-
-%% Save Output images
-if (OO.SAVE)
-  disp('Saving output image');
-  if(exist('batch_out'))
-    out_name = batch_out;
-  else
-    out_name = input_file;
-  end
-  
-  if(isfield(target, 'rgb_opt'))
-    imwrite([target.rgb target.rgb_opt], ['./../results/' out_name '.png'], 'png');
-  else
-    imwrite(target.rgb, ['./../results/' out_name '.png'], 'png');
-  end
-end
-
-%% Result Analysis
-
-if (OO.ANALYSIS)
-  MatchingAnalysis(IP.COL_METHOD, figs, source, target, neighbor_idxs);
-end
-

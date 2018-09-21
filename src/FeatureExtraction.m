@@ -20,10 +20,7 @@ else
     idxs = sub2ind(size(img_gray), samples(1,:), samples(2,:));
 end
 
-%Feature Extraction Parameters:
-activeFeats = ftsParams.features;
-vectorizeFeats = ftsParams.vectorize;
-
+%Features Parameters:
 gbParams.wl = ftsParams.gbWl;
 gbParams.oris = ftsParams.gbOr;
 siftf.patchsize = ftsParams.siftPS;
@@ -32,68 +29,69 @@ siftf.gridspacing = ftsParams.siftGs;
 %LPF before feature extraction to remove noise.
 % img_gray = imfilter(img_gray,fspecial('gaussian',5,0.5),'same','replicate');
 
-%% Features:
             
 FeatVectors = [];
 FeatLens = [];
 
-if (activeFeats(1))
-%Intensity of pixel
+%% Intensity of pixel
+FeatVectors = [FeatVectors;
+               minmaxNormalization(img_gray(idxs), [])];
+
+FeatLens = [FeatLens 1];
+
+%% Gradient (Magnitude x Direction)
+[Gmag, Gdir] = imgradient(img_gray,'intermediate');
+
+FeatVectors = [FeatVectors;
+               minmaxNormalization(Gmag(idxs), []);
+               Gdir(idxs)];
+
+FeatLens = [FeatLens 1 1];
+
+%% Gabor filter bank:
+%Test> 19/09:
+wavelengthMin = 4/sqrt(2);
+wavelengthMax = hypot(size(img_gray,1),size(img_gray,2));
+n = floor(log2(wavelengthMax/wavelengthMin));
+wavelength = 2.^(0:(n-2-1)) * wavelengthMin;
+deltaTheta = 15;
+orientation = 0:deltaTheta:(180-deltaTheta);
+gbParams.wl = wavelength;
+gbParams.oris = orientation;
+
+gaborBank = gabor(gbParams.wl, gbParams.oris);
+[gaborMag, ~] = imgaborfilt(img_gray, gaborBank);
+
+n_filters = size(gaborMag, 3);
+for i = 1:n_filters
+  gabors = gaborMag(:,:,i);
   FeatVectors = [FeatVectors;
-                 minmaxNormalization(img_gray(idxs), vectorizeFeats(1))];
-  
-  FeatLens = [FeatLens 1];
+                 minmaxNormalization(gabors(idxs), true)];
 end
 
-if (activeFeats(2))
-%Gradient (Magnitude x Direction)
-  [Gmag, Gdir] = imgradient(img_gray,'sobel');
-  Gmag = minmaxNormalization(Gmag, []);
-  wDir = Gmag.*Gdir;
-  
-  FeatVectors = [FeatVectors;
-                 minmaxNormalization(wDir(idxs), vectorizeFeats(2))];
-  
-  FeatLens = [FeatLens 1];
-end
+FeatLens = [FeatLens n_filters];
 
-if (activeFeats(3))
-%Gabor filter bank:
-  gaborBank = gabor(gbParams.wl, gbParams.oris);
-  [gaborMag, ~] = imgaborfilt(img_gray, gaborBank);
+%% Dense SIFT
+pad_frame = 3;
 
-  n_filters = size(gaborMag, 3);
-  for i = 1:n_filters
-    gabors = gaborMag(:,:,i);
-    FeatVectors = [FeatVectors;
-                   minmaxNormalization(gabors(idxs), vectorizeFeats(3))];
-  end
-  
-  FeatLens = [FeatLens n_filters];
-end
+% Zero padding to compensate for size change.
+padded_image = padarray(img_gray, [pad_frame, pad_frame]);
+sift_v = dense_sift(padded_image, siftf.patchsize, siftf.gridspacing);
 
-if (activeFeats(4))
-%Dense SIFT
-  pad_frame = 3;
+FeatVectors = [FeatVectors;
+               minmaxNormalization(sift_v(:,idxs), true)];
 
-  % Zero padding to compensate for size change.
-  padded_image = padarray(img_gray, [pad_frame, pad_frame]);
-  sift_v = dense_sift(padded_image, siftf.patchsize, siftf.gridspacing);
+FeatLens = [FeatLens 128];
 
-  FeatVectors = [FeatVectors;
-                 minmaxNormalization(sift_v(:,idxs), vectorizeFeats(4))];
-
-  FeatLens = [FeatLens 128];
-end
-  
+%%   
 if (false)
     figure(200);
     for i = 1:size(FeatVectors,1)
-        imshow(reshape(FeatVectors(i,:), size(img_gray, 1), size(img_gray, 2)));
+        imshow(reshape(FeatVectors(i,:), size(img_gray, 1), size(img_gray, 2)),[]);
 %         imwrite(reshape(FeatVectors(i,:), size(img_gray, 1), size(img_gray, 2)), ...
 %           ['./../results/feats_temp/' num2str(i) '_r.png'], 'png');
         title(['Feature ' num2str(i)]);
-        pause;
+        pause(0.1);
     end  
 end
 

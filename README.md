@@ -1,8 +1,6 @@
-IDEAS:
+TODO:
 -Gabor filter parametrizado pelo tamanho da imagem
 -nClusters (cor) ajustado pelo erro de recolorização.
-
-TODO:
 -Refactoring:
 	-Parei em: Source sampling
 	-Nova versão que só tenha modos de operação para superpixels.
