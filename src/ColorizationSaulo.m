@@ -5,6 +5,27 @@
 clearvars -except batch_out batch_folder;
 input_file = 'default';
 
+%Structure to hold the outputs of the experiment
+exp_labels = {};
+exp_cols = {};
+%Bloco 1.1
+outLabels.kNNm = 1;
+outLabels.kNNw = 2;
+outLabels.kNNE = 3;
+%Bloco 1.2
+outLabels.costkNNw = 4;
+outLabels.costkNNE = 5;
+%Bloco 1.3
+outColors.match = 1;
+% outColors.costkNNw1 = 2;
+% outColors.costkNNE1 = 3;
+%Bloco 2
+outLabels.costkNNwR = 6;
+outLabels.costkNNER = 7;
+
+%fieldsLabels = fieldnames(outLabels);
+%Criar list@ das funcoes para executar em loop.
+
 %% Input parameters
 [IP, FP, OO] = InputAlgorithmParameters(input_file);
 figs = GenerateFiguresList;
@@ -164,7 +185,7 @@ end
 %% Matching / Classification
 disp('Feature matching / Classification in Feature Space'); tic;
 
-%>Feature Space Distance Computation
+%>Metric space construction
 PDs = CombinedPDists(source.fv_sp, target.fv_sp, FP.featsWeights);
 neighbor_idxs = zeros(size(PDs));
 neighbor_dists = zeros(size(PDs));
@@ -173,115 +194,133 @@ for i = 1:size(PDs,1)
 end
 clear PDs
 
-img_gen = {};
-%>Matching:
-[match_idxs, ~] = knnsearch(source.fv_sp', target.fv_sp');
-img_gen{1, 1} = match_idxs;  img_gen{1,2} = 'match_idxs';
-
-%>Classification:
-%Classes assignment
+%>Classification
 neighbor_classes = source.sp_clusters(neighbor_idxs);
-
-%kNN
-labelsKNN = modeTies(neighbor_classes(:,1:IP.Kfs));
-img_gen{2,1} = labelsKNN; img_gen{2,2} = 'labelsKNN';
-%Predict Full
-[labelsSPrF, labelsCPrF, doubtsPrF, scoresPrF, costsPrF] = ...
-  PredictSuperpixelsClassesKNN(neighbor_classes, neighbor_dists, 0, IP.nClusters, clusters.mcCost);
-img_gen{3,1} = labelsSPrF; img_gen{3,2} = 'labelsSPrF';
-img_gen{4,1} = labelsCPrF; img_gen{4,2} = 'labelsCPrF';
-%Predict Equality
-[labelsSPrE, labelsCPrE, doubtsPrE, scoresPrE, costsPrE] = ...
-  PredictSuperpixelsClassesKNN(neighbor_classes, neighbor_dists, IP.Kfs, IP.nClusters, clusters.mcCost);
-img_gen{5,1} = labelsSPrE; img_gen{5,2} = 'labelsSPrE';
-img_gen{6,1} = labelsCPrE; img_gen{6,2} = 'labelsCPrE';
+%kNN majority
+exp_labels{outLabels.kNNm, 1} = modeTies(neighbor_classes(:,1:IP.Kfs));
+exp_labels{outLabels.kNNm, 2} = 'kNNm';
+%kNN weighted
+[exp_labels{outLabels.kNNw, 1}, ...
+ exp_labels{outLabels.costkNNw, 1}, ...
+ ~, scoresW, costsW] = PredictSuperpixelsClassesKNN(neighbor_classes, neighbor_dists, -IP.Kfs, IP.nClusters, clusters.mcCost);
+exp_labels{outLabels.kNNw, 2} = 'kNNw';
+exp_labels{outLabels.costkNNw, 2} = 'costkNNw';
+%kNN Equality
+[exp_labels{outLabels.kNNE, 1}, ...
+ exp_labels{outLabels.costkNNE, 1}, ...
+ ~, scoresE, costsE] = PredictSuperpixelsClassesKNN(neighbor_classes, neighbor_dists, IP.Kfs, IP.nClusters, clusters.mcCost);
+exp_labels{outLabels.kNNE, 2} = 'kNNE';
+exp_labels{outLabels.costkNNE, 2} = 'costkNNE';
 
 if (OO.PLOT)
-  imKNN = CreateLabeledImage(labelsKNN, target.sp, size(target.image));
-  imSPF = CreateLabeledImage(labelsSPrF, target.sp, size(target.image));
-  imDPF = CreateLabeledImage(labelsSPrF.*~doubtsPrF + -1*doubtsPrF, target.sp, size(target.image));
-  imCPF = CreateLabeledImage(labelsCPrF, target.sp, size(target.image));
-  imSPE = CreateLabeledImage(labelsSPrE, target.sp, size(target.image));
-  imDPE = CreateLabeledImage(labelsSPrE.*~doubtsPrE + -1*doubtsPrE, target.sp, size(target.image));
-  imCPE = CreateLabeledImage(labelsCPrE, target.sp, size(target.image));
+  for i = 1:5
+    imCentroids{i} = CreateCentroidImage(exp_labels{i,1}, clusters.centroids, target.sp, target.image*100);
+  end
 
-  figure; imshow([imKNN zeros(size(imKNN)) zeros(size(imKNN));
-                  imSPF imDPF imCPF;
-                  imSPE imDPE imCPE], []); colormap jet;
-  title('Locally assigned labels: [kNN - zeros - zeros] ; [Full > S D C] ; [Equality > S D C]');
+  figure; imshow([imCentroids{1}              imCentroids{2} imCentroids{3};
+                  zeros(size(imCentroids{1})) imCentroids{4} imCentroids{5}], []); colormap jet;
+  title('Locally assigned labels: Scores> [kNNm - kNNw - kNNE] ; Costs> [X - kNNw - kNNE]');
   drawnow;
-  
-  clear imKNN imSPF imDPF imCPF imSPE imDPE imCPE;
 end
- 
+
 toc;
 
 %% Edge-Aware Labeling/Relabeling
 disp('Edge-Aware Labeling/Relabeling'); tic;
-
 try
     load (['./../temp/' dataName '_eaclusters']);
-    figure(73); imshow(eaClustersImg, []); colormap 'jet'
+    if(OO.PLOT)
+      figure(73); imshow(eaClustersImg, []); colormap 'jet'
+    end
 catch
     [eaClusters, eaClustersImg] = EdgeAwareClustering(target);
     save (['./../temp/' dataName '_eaclusters'], 'eaClusters', 'eaClustersImg');
 end
 
 %Relabeling
-relabelsKNN = EdgeAwareRelabeling(eaClusters, labelsKNN, []);
-relabelsSPrE = EdgeAwareRelabeling(eaClusters, labelsSPrE, []);
-relabelsCPrE = EdgeAwareRelabeling(eaClusters, labelsCPrE, []);
-img_gen{7,1} = relabelsKNN; img_gen{7,2} = 'relabelsKNN';
-img_gen{8,1} = relabelsSPrE; img_gen{8,2} = 'relabelsSPrE';
-img_gen{9,1} = relabelsCPrE; img_gen{9,2} = 'relabelsCPrE';
+exp_labels{outLabels.costkNNwR,1} = EdgeAwareRelabeling(eaClusters, exp_labels{outLabels.costkNNE,1}, []);
+exp_labels{outLabels.costkNNwR,2} = 'costkNNwR';
+exp_labels{outLabels.costkNNER,1} = EdgeAwareRelabeling(eaClusters, exp_labels{outLabels.costkNNE,1}, []);
+exp_labels{outLabels.costkNNER,2} = 'costkNNER';
 
-%Costs Labeling
-labelsEACPrE = EdgeAwareRelabeling(eaClusters, [], costsPrE);
-img_gen{10,1} = labelsEACPrE; img_gen{10,2} = 'labelsEACPrE';
-%Scores Labeling
-labelsEASPrE = EdgeAwareRelabeling(eaClusters, [], scoresPrE);
-img_gen{11,1} = labelsEASPrE; img_gen{11,2} = 'labelsEASPrE';
-
+% %Costs Labeling
+% labelsEACPrE = EdgeAwareRelabeling(eaClusters, [], costsPrE);
 
 if (OO.PLOT)
-  imKNN = CreateLabeledImage(relabelsKNN, target.sp, size(target.image));
-  imSPE =  CreateLabeledImage(relabelsSPrE, target.sp, size(target.image));
-  imCPE = CreateLabeledImage(relabelsCPrE, target.sp, size(target.image));  
-  imEAPrEc = CreateLabeledImage(labelsEACPrE, target.sp, size(target.image));
-  imEAPrEs = CreateLabeledImage(labelsEASPrE, target.sp, size(target.image));
+  for i = 6:7
+    imCentroids{i} = CreateCentroidImage(exp_labels{i,1}, clusters.centroids, target.sp, target.image*100);
+  end
   
-  figure; imshow([imKNN imSPE imCPE;
-                  zeros(size(imKNN)) imEAPrEs imEAPrEc], []); colormap jet;
-  title('[Relabels> kNN - SE - CE] ; [EA Labels> - S C]');
+  figure; imshow([imCentroids{6} imCentroids{7} imCentroids{8}], []); colormap jet;
+  title('Relabels> [kNNm - kNNw - kNNE]');
   
-  clear imKNN imSPE imCPE imEAPrEs imEAPrEc;
 end
 
-clear match_idxs labelsKNN labelsPrF labelsPrE;
-clear relabelsKNN relabelsPrF relabelsPrE labelsEAPrFc labelsEAPrEc labelsEAPrFs labelsEAPrEs
+toc;
+
+%% EXPERIMENTS: Write the experiments centroid images
+for i = 1:7
+  imCentroids{i} = CreateCentroidImage(exp_labels{i,1}, clusters.centroids, target.sp, target.image*100);
+end
+
+for i = 1:3
+  imwrite(imCentroids{i}, ['./../results/' batch_folder batch_out dataName '_s11_' exp_labels{i,2} '_labels' '.png'], 'png');
+end
+for i = 4:5
+  imwrite(imCentroids{i}, ['./../results/' batch_folder batch_out dataName '_s12_' exp_labels{i,2} '_labels' '.png'], 'png');
+end
+
+for i = 6:7
+  imwrite(imCentroids{i}, ['./../results/' batch_folder batch_out dataName '_s2_' exp_labels{i,2} '_labels' '.png'], 'png');
+end
 
 %% Color transfer:
 disp('Color transfer + Save'); tic
 
-[tgt_scribbled, scribbles_mask] = CopyClosestSuperpixelAvgScribble(source, target, img_gen{1,1});
-    tgt_scribbled = lab2rgb(tgt_scribbled);
-target.rgb = ColorPropagationLevin(tgt_scribbled, target.luminance, scribbles_mask);
-imwrite(target.rgb, ['./../results/' batch_folder batch_out dataName '_' img_gen{1,2} '.png'], 'png');
+%>Matching colorization:
+[exp_cols{outColors.match, 1}, ~] = knnsearch(source.fv_sp', target.fv_sp');
+exp_cols{outColors.match,2} = 'match';
+[tgt_scribbled, scribbles_mask] = CopyClosestSuperpixelAvgScribble(source, target, exp_cols{outColors.match, 1});
+target.rgb = ColorPropagationLevin(lab2rgb(tgt_scribbled), target.luminance, scribbles_mask);
+imwrite(target.rgb, ['./../results/' batch_folder batch_out dataName '_s13_' exp_cols{1,2} '.png'], 'png');
 
-for i = 2:length(img_gen)
-  [tgt_scribbled, scribbles_mask] = CopyClosestSuperpixelFromClassScribble(source, target, ...
-      neighbor_idxs, neighbor_classes, img_gen{i,1}, IP.Kfs);
-  tgt_scribbled = lab2rgb(tgt_scribbled);
-  target.rgb = ColorPropagationLevin(tgt_scribbled, target.luminance, scribbles_mask);
-  
-  %TEST:
-%   figure(1); imshow(target.rgb); title(img_gen{i,2});
-%   test_lab = rgb2lab(target.rgb);
-%   for c = 2:3
-%     figure(c); imshow(test_lab(:,:,c), []);
-%   end
-  
-  imwrite(target.rgb, ['./../results/' batch_folder batch_out dataName '_' img_gen{i,2} '.png'], 'png');
-end
+%>Classification colorizations: (using only the nearest neighbor color)
+[tgt_scribbled, scribbles_mask] = CopyClosestSuperpixelFromClassScribble(source, target, ...
+      neighbor_idxs, neighbor_classes, exp_labels{outLabels.costkNNw,1}, 1);
+target.rgb = ColorPropagationLevin(lab2rgb(tgt_scribbled), target.luminance, scribbles_mask);
+imwrite(target.rgb, ['./../results/' batch_folder batch_out dataName '_s13_' exp_labels{outLabels.costkNNw,2} '.png'], 'png');
+
+[tgt_scribbled, scribbles_mask] = CopyClosestSuperpixelFromClassScribble(source, target, ...
+      neighbor_idxs, neighbor_classes, exp_labels{outLabels.costkNNE,1}, 1);
+target.rgb = ColorPropagationLevin(lab2rgb(tgt_scribbled), target.luminance, scribbles_mask);
+imwrite(target.rgb, ['./../results/' batch_folder batch_out dataName '_s13_' exp_labels{outLabels.costkNNE,2} '.png'], 'png');
+
+%>Full method colorizations:
+%costKNNwR
+[tgt_scribbled, scribbles_mask] = CopyClosestSuperpixelFromClassScribble(source, target, ...
+      neighbor_idxs, neighbor_classes, exp_labels{outLabels.costkNNwR,1}, IP.Kfs);
+target.rgb = ColorPropagationLevin(lab2rgb(tgt_scribbled), target.luminance, scribbles_mask);
+imwrite(target.rgb, ['./../results/' batch_folder batch_out dataName '_final_' exp_labels{outLabels.costkNNwR,2} '.png'], 'png');
+%costKNNER
+[tgt_scribbled, scribbles_mask] = CopyClosestSuperpixelFromClassScribble(source, target, ...
+      neighbor_idxs, neighbor_classes, exp_labels{outLabels.costkNNER,1}, IP.Kfs);
+target.rgb = ColorPropagationLevin(lab2rgb(tgt_scribbled), target.luminance, scribbles_mask);
+imwrite(target.rgb, ['./../results/' batch_folder batch_out dataName '_final_' exp_labels{outLabels.costkNNER,2} '.png'], 'png');
+
+% for i = 2:length(exp_labels)
+%   [tgt_scribbled, scribbles_mask] = CopyClosestSuperpixelFromClassScribble(source, target, ...
+%       neighbor_idxs, neighbor_classes, exp_labels{i,1}, IP.Kfs);
+%   tgt_scribbled = lab2rgb(tgt_scribbled);
+%   target.rgb = ColorPropagationLevin(tgt_scribbled, target.luminance, scribbles_mask);
+%   
+%   %TEST:
+% %   figure(1); imshow(target.rgb); title(img_gen{i,2});
+% %   test_lab = rgb2lab(target.rgb);
+% %   for c = 2:3
+% %     figure(c); imshow(test_lab(:,:,c), []);
+% %   end
+%   
+%   imwrite(target.rgb, ['./../results/' batch_folder batch_out dataName '_' exp_labels{i,2} '.png'], 'png');
+% end
 
 toc;
