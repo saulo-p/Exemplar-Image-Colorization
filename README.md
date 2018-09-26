@@ -1,5 +1,4 @@
 TODO:
--Gabor filter parametrizado pelo tamanho da imagem
 -nClusters (cor) ajustado pelo erro de recolorização.
 -Refactoring:
 	-Parei em: Source sampling

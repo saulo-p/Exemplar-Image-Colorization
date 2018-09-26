@@ -2,8 +2,8 @@
 % Exemplar-based colorization algorithm
 % Author: Saulo Pereira
 %-------------------------------------------------------------------
+clearvars -except batch_out batch_folder;
 input_file = 'default';
-clearvars -except batch_out;
 
 %% Input parameters
 [IP, FP, OO] = InputAlgorithmParameters(input_file);
@@ -266,7 +266,7 @@ disp('Color transfer + Save'); tic
 [tgt_scribbled, scribbles_mask] = CopyClosestSuperpixelAvgScribble(source, target, img_gen{1,1});
     tgt_scribbled = lab2rgb(tgt_scribbled);
 target.rgb = ColorPropagationLevin(tgt_scribbled, target.luminance, scribbles_mask);
-imwrite(target.rgb, ['./../results/' batch_out dataName '_' img_gen{1,2} '.png'], 'png');
+imwrite(target.rgb, ['./../results/' batch_folder batch_out dataName '_' img_gen{1,2} '.png'], 'png');
 
 for i = 2:length(img_gen)
   [tgt_scribbled, scribbles_mask] = CopyClosestSuperpixelFromClassScribble(source, target, ...
@@ -274,7 +274,14 @@ for i = 2:length(img_gen)
   tgt_scribbled = lab2rgb(tgt_scribbled);
   target.rgb = ColorPropagationLevin(tgt_scribbled, target.luminance, scribbles_mask);
   
-  imwrite(target.rgb, ['./../results/' batch_out dataName '_' img_gen{i,2} '.png'], 'png');
+  %TEST:
+%   figure(1); imshow(target.rgb); title(img_gen{i,2});
+%   test_lab = rgb2lab(target.rgb);
+%   for c = 2:3
+%     figure(c); imshow(test_lab(:,:,c), []);
+%   end
+  
+  imwrite(target.rgb, ['./../results/' batch_folder batch_out dataName '_' img_gen{i,2} '.png'], 'png');
 end
 
 toc;
