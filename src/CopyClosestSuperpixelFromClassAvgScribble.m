@@ -1,4 +1,4 @@
-function [lab_out, scribbles_mask] = CopyClosestSuperpixelFromClassScribble(source, target, ...
+function [lab_out, scribbles_mask] = CopyClosestSuperpixelFromClassAvgScribble(source, target, ...
   neighbor_idxs, neighbor_classes, labels, Kct)
 %TODO
 
@@ -20,9 +20,9 @@ for c = 2:3
     for ni = 1:min([Kct length(majority_instances)])
       src_mask = src_mask | (source.sp==neighbor_idxs(i,majority_instances(ni)));
     end
-    cntrd = round(target.sp_centroids(:,i));
     
     %Prototype color transfer (Superpixel average)
+    cntrd = round(target.sp_centroids(:,i));
     mask_c = source.lab(:,:,c).*src_mask;
     avg_sp = sum(sum(mask_c))/length(find(src_mask));
     lab_out(cntrd(1), cntrd(2), c) = avg_sp;

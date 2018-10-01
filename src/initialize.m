@@ -18,7 +18,8 @@ end
 
 %
 for in_i = 1:length(list)
-  batch_out = list{in_i};
+  clc;
+  batch_out = list{in_i}
   batch_out = [batch_out(1:end-3) '/'];
   mkdir(['./../results/' batch_folder batch_out])
   copyfile([input_path list{in_i}], [input_folder 'default.in']);

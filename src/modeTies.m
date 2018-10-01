@@ -4,7 +4,11 @@ function y = modeTies(x)
 
 for t = 1:length(ties)
   if(length(ties{t}) > 1)
-    y(t) = -1;
+    idxs = [];
+    for l = 1:length(ties{t})
+      idxs = [idxs find(ties{t}(l)==x(t, :))];
+      y(t) = x(t,min(idxs));
+    end
   end
 end
 

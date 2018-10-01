@@ -9,4 +9,3 @@ end
 im_labeled(1,1) = -1; %For comparison with classification
 
 end
-

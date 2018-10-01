@@ -4,7 +4,7 @@ function [labelsScores, labelsCosts, doubts, clScores, clCost] = ...
 %https://www.mathworks.com/help/stats/classificationknn.predict.html
 % Chosen class is the one that minimizes the cost based on posterior
 % probability.
-%-Kfs < 0, normal with K = Kfs.
+%-Kfs < 0, normal with K = -Kfs.
 %-Kfs = 0, all superpixels.
 %-Kfs > 0, equality with K = Kfs.
 %-mcCost: If present, labels minimize cost. If absent, maximizes posterior. 
@@ -40,7 +40,7 @@ else
 end
 
 %Generate weights based on distance in feature space
-fsdist_w = 1./nb_dists.^4;
+fsdist_w = 1./nb_dists.^2;
 fsdist_w = fsdist_w ./ repmat(sum(fsdist_w, 2), [1, size(fsdist_w,2)]);
 
 %Calculate posterior probability (class given observation)
