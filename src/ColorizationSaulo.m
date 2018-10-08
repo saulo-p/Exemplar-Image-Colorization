@@ -186,13 +186,92 @@ end
 %% Matching / Classification
 disp('Feature matching / Classification in Feature Space'); tic;
 
-interimage = false;
+%SURF mapping test:
+if(true) 
+  %% Source -> Target SURF mapping
+  PDs = CombinedPDists(source.fv_sp, target.fv_sp, [0.25,0,0,0,0,0,1,0,0]);
+  nb_surf_idxs = zeros(size(PDs));
+  nb_surf_dists = zeros(size(PDs));
+  for i = 1:size(PDs,1)
+    [nb_surf_dists(i,:), nb_surf_idxs(i,:)] = sort(PDs(i,:));
+  end
+  clear PDs
+
+  %Classes from neighbors
+  nb_surf_classes = source.sp_clusters(nb_surf_idxs);
+  
+  %SURF initial classification 
+  surf_labels = nb_surf_classes(:,1);
+  surf_doubts = nb_surf_dists(:,1) >= 0.2;
+
+  if (OO.PLOT)
+    surf_labels_img = CreateLabeledImage(surf_labels.*~surf_doubts + -1*surf_doubts, target.sp, size(target.image));
+    
+    figure; imshow(surf_labels_img, []); colormap jet;
+    drawnow;
+  end
+  
+  %% Target -> Target class correction
+  FP.featsWeights = [0.5,0.5,0.1,0.25,0.25,2,1,0,0.25];
+
+  PDs = CombinedPDists(target.fv_sp, target.fv_sp, FP.featsWeights);
+  nb_ld_idxs = zeros(size(PDs));
+  nb_ld_dists = zeros(size(PDs));
+  for i = 1:size(PDs,1)
+    [nb_ld_dists(i,:), nb_ld_idxs(i,:)] = sort(PDs(i,:));
+  end
+  clear PDs
+  
+  nb_ld_classes = surf_labels(nb_ld_idxs);
+  %Adapta para Predict
+  nb_ld_classes = [nb_ld_classes(:,2:end) nb_ld_classes(:,1)];
+  nb_ld_idxs = [nb_ld_idxs(:,2:end) nb_ld_idxs(:,1)];
+  nb_ld_dists = [nb_ld_dists(:,2:end) nb_ld_dists(:,1)];
+  
+  %kNN majority
+  exp_labels{outLabels.kNNm, 1} = modeTies(nb_ld_classes(:,1:IP.Kfs));
+  exp_labels{outLabels.kNNm, 2} = 'kNNm';
+  %kNN Equality
+  [exp_labels{outLabels.kNNE, 1}, ...
+   exp_labels{outLabels.costkNNE, 1}, ...
+   ~, ~, ~] = PredictSuperpixelsClassesKNN(nb_ld_classes, nb_ld_dists, IP.Kfs, IP.nClusters, clusters.mcCost);
+  exp_labels{outLabels.kNNE, 2} = 'kNNE';
+  exp_labels{outLabels.costkNNE, 2} = 'costkNNE';
+  
+  if (OO.PLOT)
+    for i = 1:3
+      imClosestSP{i} = CreateLabeledImage(exp_labels{i,1}, target.sp, size(target.image));
+    end
+
+    figure; imshow([imClosestSP{1} imClosestSP{2};
+                    zeros(size(imClosestSP{1})) imClosestSP{3}], []); colormap jet;
+    title('Locally assigned labels: Scores> [kNNm - kNNE] ; Costs> [X - kNNE]');
+    drawnow;
+  end
+  
+  %% Color neighborhood
+  FP.featsWeights = [0.5,0.5,0.1,0.25,0.25,2,1,0,0.25];
+
+  PDs = CombinedPDists(source.fv_sp, target.fv_sp, FP.featsWeights);
+  neighbor_idxs = zeros(size(PDs));
+  neighbor_dists = zeros(size(PDs));
+  for i = 1:size(PDs,1)
+    [neighbor_dists(i,:), neighbor_idxs(i,:)] = sort(PDs(i,:));
+  end
+  clear PDs
+  
+  neighbor_classes = source.sp_clusters(neighbor_idxs);
+  
+end
+
+%%
+intraimage = false;
 tgt_cluster = TextureClustering(target.fv_sp, [], IP.nClusters, true);
 
 FP.featsWeights = [0.5,0.5,0.1,0.25,0.25,2,1,0,0.25];
 
-if (interimage)
-%INTER-IMAGE FEATURE CLASSIFICATION.
+if (intraimage)
+%INTRA-IMAGE FEATURE CLASSIFICATION.
 
 PDs = CombinedPDists(source.fv_sp, source.fv_sp, FP.featsWeights);
 neighbor_idxs = zeros(size(PDs));
@@ -201,6 +280,7 @@ for i = 1:size(PDs,1)
   [neighbor_dists(i,:), neighbor_idxs(i,:)] = sort(PDs(i,:));
 end
 clear PDs
+
 neighbor_classes = source.sp_clusters(neighbor_idxs);
 
 %Adapta para Predict
@@ -219,7 +299,6 @@ else
   clear PDs
 end
 
-neighbor_classes = source.sp_clusters(neighbor_idxs);
 %kNN majority
 exp_labels{outLabels.kNNm, 1} = modeTies(neighbor_classes(:,1:IP.Kfs));
 exp_labels{outLabels.kNNm, 2} = 'kNNm';
@@ -232,7 +311,7 @@ exp_labels{outLabels.costkNNE, 2} = 'costkNNE';
 
 if (OO.PLOT)
   for i = 1:3
-    if (interimage)
+    if (intraimage)
       imClosestSP{i} = CreateLabeledImage(exp_labels{i,1}, source.sp, size(source.sp));
 %     imClosestSP{i} = CreateCentroidImage(exp_labels{i,1}, clusters.centroids, target.sp, target.image);
     else
