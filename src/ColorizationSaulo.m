@@ -2,25 +2,21 @@
 % Exemplar-based colorization algorithm
 % Author: Saulo Pereira
 %-------------------------------------------------------------------
-clearvars -except batch_out batch_folder input_folder input_path list;
+clearvars -except batch_out batch_folder input_folder input_path list in_i;
+
 input_file = 'default';
 
 %Structure to hold the outputs of the experiment
 exp_labels = {};
 exp_cols = {};
-%Bloco 1.1
-outLabels.kNNm = 1;
-outLabels.kNNE = 2;
-%Bloco 1.2
-outLabels.costkNNE = 3; 
-outLabels.costkNNE_K = 4; 
-%Bloco 2
-outLabels.costkNNER = 5;
-%Bloco 1.3
-outColors.match = 6;
 
-%fieldsLabels = fieldnames(outLabels);
-%Criar list@ das funcoes para executar em loop.
+outTypes = {'kNNm', 'kNNE', 'costkNNE', 'costkNNER', 'match'};
+fieldValues = [];
+for i = 1:numel(outTypes)
+  fieldValues = [fieldValues char(39) outTypes{i} char(39) ',' num2str(i) ','];
+end
+call = ['struct(' fieldValues(1:end-1) ')'];
+outLabels = eval(call);
 
 %% Input parameters
 [IP, FP, OO] = InputAlgorithmParameters(input_file);
@@ -32,11 +28,11 @@ figs = GenerateFiguresList;
 %% Color space conversion
 source.lab = rgb2lab(source.image);
 
-if (OO.PLOT)
+if (OO.PLOT && false)
   ShowColorDistribution(source.image, source.lab);
 end
 
-%% Luminance Remapping (source to target)
+%% Luminance Remapping
 tgt_lab = rgb2lab(cat(3, target.image, target.image, target.image));
 target.luminance = tgt_lab(:,:,1)/100;
 
@@ -155,7 +151,6 @@ if (IP.SUPERPIXEL)
     disp('Superpixel labeling'); tic;
     [source.sp_clusters, source.sp_chrom] = SuperpixelLabeling(source.lab, clusters.idxs, source.lin_sp, ...
       IP.LBL_MAJOR, OO.PLOT, source.sp, size(source.luminance));
-    toc;
   end
      
   %> Superpixel Feature Aggregation
@@ -169,6 +164,16 @@ if (IP.SUPERPIXEL)
   %> Saliency Feature Computation
   [ssi1, ssi2] = SaliencyFeature(source.luminance, source.sp, source.nSuperpixels);
   [tsi1, tsi2] = SaliencyFeature(target.luminance, target.sp, target.nSuperpixels);
+  
+  if (OO.PLOT)
+    figure;
+    subplot(2,1,1);
+    imshow([ssi1 ssi2],[]);
+    subplot(2,1,2);
+    imshow([tsi1 tsi2],[]);
+    title('Saliency Feature');
+  end
+  
   %Find unique superpixels indexes and concatenate their saliency values
   %onto the feature vector.
   [sp_idxs, src_idxs] = unique(source.lin_sp);
@@ -181,16 +186,39 @@ end
 %% Matching / Classification
 disp('Feature matching / Classification in Feature Space'); tic;
 
-%>Metric space construction
-PDs = CombinedPDists(source.fv_sp, target.fv_sp, FP.featsWeights);
+interimage = false;
+tgt_cluster = TextureClustering(target.fv_sp, [], IP.nClusters, true);
+
+FP.featsWeights = [0.5,0.5,0.1,0.25,0.25,2,1,0,0.25];
+
+if (interimage)
+%INTER-IMAGE FEATURE CLASSIFICATION.
+
+PDs = CombinedPDists(source.fv_sp, source.fv_sp, FP.featsWeights);
 neighbor_idxs = zeros(size(PDs));
 neighbor_dists = zeros(size(PDs));
 for i = 1:size(PDs,1)
   [neighbor_dists(i,:), neighbor_idxs(i,:)] = sort(PDs(i,:));
 end
 clear PDs
+neighbor_classes = source.sp_clusters(neighbor_idxs);
 
-%>Classification
+%Adapta para Predict
+neighbor_classes = [neighbor_classes(:,2:end) neighbor_classes(:,1)];
+neighbor_idxs = [neighbor_idxs(:,2:end) neighbor_idxs(:,1)];
+neighbor_dists = [neighbor_dists(:,2:end) neighbor_dists(:,1)];
+
+else
+  %>Metric space construction
+  PDs = CombinedPDists(source.fv_sp, target.fv_sp, FP.featsWeights);
+  neighbor_idxs = zeros(size(PDs));
+  neighbor_dists = zeros(size(PDs));
+  for i = 1:size(PDs,1)
+    [neighbor_dists(i,:), neighbor_idxs(i,:)] = sort(PDs(i,:));
+  end
+  clear PDs
+end
+
 neighbor_classes = source.sp_clusters(neighbor_idxs);
 %kNN majority
 exp_labels{outLabels.kNNm, 1} = modeTies(neighbor_classes(:,1:IP.Kfs));
@@ -201,18 +229,20 @@ exp_labels{outLabels.kNNm, 2} = 'kNNm';
  ~, scoresE, costsE] = PredictSuperpixelsClassesKNN(neighbor_classes, neighbor_dists, IP.Kfs, IP.nClusters, clusters.mcCost);
 exp_labels{outLabels.kNNE, 2} = 'kNNE';
 exp_labels{outLabels.costkNNE, 2} = 'costkNNE';
-exp_labels{outLabels.costkNNE_K, 1} = exp_labels{outLabels.costkNNE, 1};
-exp_labels{outLabels.costkNNE_K, 2} = 'costkNNE_K';
-
 
 if (OO.PLOT)
-  for i = 1:5
-    imClosestSP{i} = CreateLabeledImage(exp_labels{i,1}, target.sp, size(target.image));
+  for i = 1:3
+    if (interimage)
+      imClosestSP{i} = CreateLabeledImage(exp_labels{i,1}, source.sp, size(source.sp));
+%     imClosestSP{i} = CreateCentroidImage(exp_labels{i,1}, clusters.centroids, target.sp, target.image);
+    else
+      imClosestSP{i} = CreateLabeledImage(exp_labels{i,1}, target.sp, size(target.image));
+    end
   end
 
-  figure; imshow([imClosestSP{1}              imClosestSP{2} imClosestSP{3};
-                  zeros(size(imClosestSP{1})) imClosestSP{4} imClosestSP{5}], []); colormap jet;
-  title('Locally assigned labels: Scores> [kNNm - kNNw - kNNE] ; Costs> [X - kNNw - kNNE]');
+  figure; imshow([imClosestSP{1} imClosestSP{2};
+                  zeros(size(imClosestSP{1})) imClosestSP{3}], []); colormap jet;
+  title('Locally assigned labels: Scores> [kNNm - kNNE] ; Costs> [X - kNNE]');
   drawnow;
 end
 
@@ -238,12 +268,12 @@ exp_labels{outLabels.costkNNER,2} = 'costkNNER';
 % labelsEACPrE = EdgeAwareRelabeling(eaClusters, [], costsPrE);
 
 if (OO.PLOT)
-  for i = 6:7
+  for i = 4
     imClosestSP{i} = CreateLabeledImage(exp_labels{i,1}, target.sp, size(target.image));
   end
   
-  figure; imshow([imClosestSP{6} imClosestSP{7}], []); colormap jet;
-  title('Relabels> [kNNw - kNNE]');
+  figure; imshow(imClosestSP{4}, []); colormap jet;
+  title('Relabels> [costkNNE]');
   
 end
 
@@ -260,29 +290,29 @@ for i = 1:3
     imClosestSP{i} = lab2rgb(lab_out);
   end
 end
-%kNNEcost(K), kNNEcostR(K)
-for i = 4:5
+% kNNEcostR(K)
+for i = 4
   if (~isempty(exp_labels{i,1}))
     lab_out = CopyClosestSuperpixelFromClassAvgColor(source, target, ...
       neighbor_idxs, neighbor_classes, exp_labels{i,1}, IP.Kfs);
     imClosestSP{i} = lab2rgb(lab_out);
   end
 end
-%Matching
+%Matching (1)
 [nns, ~] = knnsearch(source.fv_sp', target.fv_sp');
-imClosestSP{outColors.match} = lab2rgb(CopyClosestSuperpixelAvgColor(source, target, nns));
+imClosestSP{outLabels.match} = lab2rgb(CopyClosestSuperpixelAvgColor(source, target, nns));
 
-for i = 1:4
+for i = 1:3
   if (~isempty(imClosestSP{i}))
     imwrite(imClosestSP{i}, ['./../results/' batch_folder batch_out '_s1_' exp_labels{i,2} '_labels' '.png'], 'png');
   end
 end
-for i = 5
+for i = 4
   if (~isempty(imClosestSP{i}))
     imwrite(imClosestSP{i}, ['./../results/' batch_folder batch_out '_s2_' exp_labels{i,2} '_labels' '.png'], 'png');
   end
 end
-imwrite(imClosestSP{outColors.match}, ['./../results/' batch_folder batch_out '_s1_' 'cmatch' '_labels' '.png'], 'png');
+imwrite(imClosestSP{outLabels.match}, ['./../results/' batch_folder batch_out '_s1_' 'cmatch' '_labels' '.png'], 'png');
 
 toc;
 
@@ -297,3 +327,6 @@ target.rgb = ColorPropagationLevin(lab2rgb(tgt_scribbled), target.luminance, scr
 imwrite(target.rgb, ['./../results/' batch_folder batch_out dataName '_final_' exp_labels{outLabels.costkNNER,2} '.png'], 'png');
 
 toc;
+
+%%
+clearvars -except batch_out batch_folder input_folder input_path list in_i;

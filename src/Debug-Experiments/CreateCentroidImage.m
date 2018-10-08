@@ -3,7 +3,7 @@ function [im_centroid] = CreateCentroidImage(sp_labels, cl_centroids, image_sps,
 
 img_size = size(img_gray);
 im_centroid = zeros(img_size(1), img_size(2), 3);
-im_centroid(:,:,1) = img_gray;
+im_centroid(:,:,1) = img_gray*100;
 
 for i = 1:length(sp_labels)
   if (sp_labels(i) == -1)
