@@ -62,7 +62,7 @@ clCost = pP*mcCost;
 
 %% Scores Label doubt:
 
-tol = (repmat(scores, 1, nClasses) - clScores < 0.1);
+tol = (repmat(scores, 1, nClasses) - clScores < (1/nClasses)*0.75 );
 tol = sum(tol,2);
 %Mark label as not sure
 doubts = (tol > 1);

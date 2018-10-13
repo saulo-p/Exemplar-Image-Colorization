@@ -6,13 +6,13 @@ ParamList{4} =      0;
 ParamList{5} =      2;	
 
 ParamList{6} =			-1;
-ParamList{7} =      {4, 5};
-ParamList{8} =			{5, 7};
+ParamList{7} =      {5};
+ParamList{8} =			{7};
 ParamList{9} =			-1;
-ParamList{10} =     -1;
+ParamList{10} =     4000;
 ParamList{11}	=     0.0;
 
-ParamList{12} =     {'1,1,1,1,1,1,1,1,1', '1,1,1,1,1,1,1,0,1', '1,1,1,1,1,1,1,0,0', '1,1,0,1,1,1,1,0,0', '1,1,1,0,1,1,1,0,0'};
+ParamList{12} =     {'0.25,0.25,0,0.1,0.75,2.0,0.5,0,0.25'};
 ParamList{13} =     'false, false, true, true, true, true, true, true';
 ParamList{14} =     'true, true, true';
 
@@ -25,15 +25,31 @@ ParamList{20} =     8;
 ParamList{21} =     1;
 ParamList{22} =     -1;
 
-ParamList{23} = 		'./../data/gupta/';
-ParamList{24} = 		{'001_r.png', '002_r.png', '003_r.png', '004_r.png', '005_r.png', '006_r.png', '007_r.png', '008_r.png', '009_r.png', '010_r.png', 'I003_r.png'};
-ParamList{25} = 		{'001_i.png', '002_i.png', '003_i.png', '004_i.png', '005_i.png', '006_i.png', '007_i.png', '008_i.png', '009_i.png', '010_i.png', 'I003_i.png'};
+% ParamList{23} = 		'./../data/gupta/';
+% ParamList{24} = 		{'001_r.png','002_r.png','003_r.png','004_r.png','005_r.png','006_r.png','007_r.png','008_r.png','009_r.png','010_r.png'};
+% ParamList{25} = 		{'001_i.png','002_i.png','003_i.png','004_i.png','005_i.png','006_i.png','007_i.png','008_i.png','009_i.png','010_i.png'};
+
+% ParamList{23} = 		'./../data/gupta/';
+% ParamList{24} = 		{'I001_r.png', 'I002_r.png', 'I003_r.png', 'I004_r.png'};
+% ParamList{25} = 		{'I001_i.png', 'I002_i.png', 'I003_i.png', 'I004_i.png'};
+
+% ParamList{23} = 		'./../data/similar_descriptors/';
+% ParamList{24} = 		{'baby_beach2.jpg', 'bananas1.jpg', 'beach1.jpg', 'desert1.jpg', 'girl_beach1.jpg', 'painting1.jpg', 'parking_lot1.jpg', 'person2.jpg', 'road1.jpg', 'roadside1.jpg', 'smoke1.jpg'};
+% ParamList{25} = 		{'baby_beach3.jpg', 'bananas2.jpg', 'beach2.jpg', 'desert2.jpg', 'girl_beach2.jpg', 'painting2.jpg', 'parking_lot2.jpg', 'person1.jpg', 'road2.jpg', 'roadside2.jpg', 'smoke2.jpg'};
+
+% ParamList{23} = 		'./../data/balance/';
+% ParamList{24} = 		{'alex1.jpg', 'alex_close1.jpg', 'bolt3.jpg', 'climber3.jpg', 'running_shoes3.jpg', 'surf3.jpg'};
+% ParamList{25} = 		{'alex2.jpg', 'alex_close2.jpg', 'bolt2.jpg', 'climber1.jpg', 'running_shoes2.jpg', 'surf1.jpg'};
+
+ParamList{23} = 		'./../data/misc/';
+ParamList{24} = 		{'baby_beach1.jpg', 'building1.jpg', 'chamomile1.jpg', 'ferrari_blurred1.jpg', 'ferrari1.jpg', 'jimi1.jpg', 'kombi_style1.jpg', 'kombi1.jpg', 'moto1.jpg', 'parthenon1.jpg', 'person1.jpg', 'pisa1.jpg', 'plane1.jpg', 'rede1.jpg', 'rose1.jpg', 'taj1.jpg', 'toddler_beach1.jpg', 'wedding1.jpg'};
+ParamList{25} = 		{'baby_beach2.jpg', 'building2.jpg', 'chamomile2.jpg', 'ferrari_blurred2.jpg', 'ferrari2.jpg', 'jimi2.jpg', 'kombi_style2.jpg', 'kombi2.jpg', 'moto2.jpg', 'parthenon2.jpg', 'person2.jpg', 'pisa2.jpg', 'plane2.jpg', 'rede2.jpg', 'rose3.jpg', 'taj2.jpg', 'toddler_beach2.jpg', 'wedding2.jpg'};
 
 ParamList{26} =     false;
 ParamList{27} =     false;
 ParamList{28} =     true;
 
-folder_name = 'DissertationExperiments/';
+folder_name = 'MiscData/';
 
 
 %% Name list
