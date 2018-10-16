@@ -49,15 +49,6 @@ FeatVectors = [FeatVectors;
 FeatLens = [FeatLens 1 1];
 
 %% Gabor filter bank:
-%Test> 19/09:
-wavelengthMin = 4/sqrt(2);
-wavelengthMax = hypot(size(img_gray,1),size(img_gray,2));
-n = floor(log2(wavelengthMax/wavelengthMin));
-wavelength = 2.^(0:(n-2-1)) * wavelengthMin;
-deltaTheta = 15;
-orientation = 0:deltaTheta:(180-deltaTheta);
-gbParams.wl = wavelength;
-gbParams.oris = orientation;
 
 gaborBank = gabor(gbParams.wl, gbParams.oris);
 [gaborMag, ~] = imgaborfilt(img_gray, gaborBank);

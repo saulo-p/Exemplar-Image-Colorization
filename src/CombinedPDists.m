@@ -24,11 +24,14 @@ function PD  = CombinedPDists(spfM1, spfM2, featsWeigths)
   
   PDs = {};
   kIdxs = {};
+%   figure;
   for pdi = 1:length(descsLen)
     idxs = (descsBounds(pdi)+1):descsBounds(pdi+1);
 %     [kIdxs{pdi}, PDs{pdi}] = knnsearch(spfM1(idxs,:)', spfM2(idxs,:)', 'K', src_nSP);
     PDs{pdi} = pdist2(spfM1(idxs,:)', spfM2(idxs,:)');
+%     subplot(2,1,1); histogram(PDs{pdi});
     PDs{pdi} = PDs{pdi} / max(PDs{pdi}(:));
+%     subplot(2,1,2); histogram(PDs{pdi});
   end
   idxs = (descsBounds(3)+1):descsBounds(3+1);
   PDs{3} = pdist2(spfM1(idxs,:)', spfM2(idxs,:)', @match_distance);

@@ -2,7 +2,7 @@
 clear all;
 close all;
 
-batch_folder = 'DissertationExperimentsSD/';
+batch_folder = 'GuptaData/';
 
 %%
 % src_path = pwd;
@@ -17,10 +17,11 @@ for in_i = 3:length(files)
 end
 
 %
-for in_i = 61:length(list)
-  batch_out = list{in_i};
+for in_i = 1:length(list)
+  clc;
+  batch_out = list{in_i}
   batch_out = [batch_out(1:end-3) '/'];
-  mkdir(['./../results/' batch_out])
+  mkdir(['./../results/' batch_folder batch_out])
   copyfile([input_path list{in_i}], [input_folder 'default.in']);
   run('ColorizationSaulo');
   delete([input_folder 'default.in']);

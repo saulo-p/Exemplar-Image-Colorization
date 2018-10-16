@@ -50,7 +50,13 @@ end
 %% Misclassification costs matrix
 
 mc_cost = squareform(pdist(C(:,1:2)));
-mc_cost = mc_cost*((nClusters - 1)/norm(mc_cost));
+if (true)
+  for i = 1:size(mc_cost,2)
+    mc_cost(:,i) = mc_cost(:,i)/sum(mc_cost(:,i));
+  end
+else
+  mc_cost = mc_cost*((nClusters - 1)/norm(mc_cost));
+end
 
 %% Output
 
