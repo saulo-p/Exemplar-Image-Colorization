@@ -12,8 +12,8 @@ ParamList{9} =			-1;
 ParamList{10} =     4000;
 ParamList{11}	=     0.0;
 
-ParamList{12} =     {'0.25,0.25,0,0.1,0.75,2.0,0.5,0,0.25'};
-ParamList{13} =     'false, false, true, true, true, true, true, true';
+ParamList{12} =     {'0.25,0,   0,0,	0,		0,	1,	0,0.15'};
+ParamList{13} =     {'0.25,0.25,0,0.1,0.75,	2.0,0.5,0,0.25'};
 ParamList{14} =     'true, true, true';
 
 ParamList{15} =     -1;
@@ -66,8 +66,8 @@ Names{9} = 'Kis';
 Names{10} = 'N_SUPERPIXELS';
 Names{11} = 'LBL_MAJOR';
 
-Names{12} = 'ON_FEATURES';
-Names{13} = 'VEC_FEATURES';
+Names{12} = 'FEATURES_1P';
+Names{13} = 'FEATURES_2P';
 Names{14} = 'ON_STATS';
 
 Names{15} = 'FTS_STD_WINDOWSIZE';
