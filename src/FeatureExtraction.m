@@ -79,8 +79,8 @@ if (false)
     figure(200);
     for i = 1:size(FeatVectors,1)
         imshow(reshape(FeatVectors(i,:), size(img_gray, 1), size(img_gray, 2)),[]);
-%         imwrite(reshape(FeatVectors(i,:), size(img_gray, 1), size(img_gray, 2)), ...
-%           ['./../results/feats_temp/' num2str(i) '_r.png'], 'png');
+        imwrite(reshape(FeatVectors(i,:), size(img_gray, 1), size(img_gray, 2)), ...
+          ['./../results/feats_temp/' num2str(i) '_r.png'], 'png');
         title(['Feature ' num2str(i)]);
         pause(0.1);
     end  
