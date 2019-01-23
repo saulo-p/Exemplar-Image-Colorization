@@ -1,4 +1,7 @@
-3rd party code:
--Based (loosely): 
+##### Code TODO: #####
+* Remover sampling
+* Remover modos de operação baseados em pixels
+* Recriar os módulos de visualização de nearest neighbors.
 
--Gupta: dense SIFT
+##### Project ideas: #####
+* Optimize the weights of features based on data complexity measures.
