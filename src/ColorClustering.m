@@ -81,7 +81,7 @@ if (PLOT)
 
   subplot(1,2,2);
   imshow(lab2rgb(im_out));
-  title(['Image colorized from ' num2str(nClusters) ' clusters (Centroid)']);
+  title(['Source represented with only ' num2str(nClusters) ' colors (Centroid of each cluster)']);
 end
 
 end
