@@ -57,11 +57,6 @@ function sp_fv = fillSPFV(fv, linSPIdxs, nSP, nBins, fvLens)
       %Pixel features belongin to spi
       p_feats_spi = fv((ftsBounds(fi)+1):ftsBounds(fi+1),mask);
       
-%       if(fi == 3)
-%         histogram(p_feats_spi,dirEdges);
-%         pause(0.1);
-%       end
-            
       for si = 1:length(descripts{fi})
         sp_fv((descsBounds(desc_idx)+1):descsBounds(desc_idx+1), spi) = descripts{fi}{si}(p_feats_spi);
         desc_idx = desc_idx + 1;

@@ -40,7 +40,7 @@ else
 end
 
 %Generate weights based on distance in feature space
-fsdist_w = 1./nb_dists.^2;
+fsdist_w = 1./nb_dists.^4;
 fsdist_w = fsdist_w ./ repmat(sum(fsdist_w, 2), [1, size(fsdist_w,2)]);
 
 %Calculate posterior probability (class given observation)

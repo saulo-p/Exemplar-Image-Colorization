@@ -1,4 +1,4 @@
-function PD  = CombinedPDists(spfM1, spfM2, featsWeigths)
+function [PD, nb_idxs, nb_dists]  = CombinedPDists(spfM1, spfM2, featsWeigths)
   %@anonymous minmax
 %   minmax = @(x) (x - min(x))/(max(x) - min(x)); 
   
@@ -49,4 +49,11 @@ function PD  = CombinedPDists(spfM1, spfM2, featsWeigths)
     PD = PD + featsWeigths(i)*PDs{i};
   end
   PD = PD';
+  
+  %
+  nb_idxs = zeros(size(PD));
+  nb_dists = zeros(size(PD));
+  for i = 1:size(PD,1)
+    [nb_dists(i,:), nb_idxs(i,:)] = sort(PD(i,:));
+  end
 end

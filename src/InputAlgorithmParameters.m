@@ -43,20 +43,20 @@ for i = 1:(length(split) - 1)
       case 'LBL_MAJOR'
         inParams.LBL_MAJOR = str2num(val);
 
-      case 'ON_FEATURES'
+      case 'FEATURES_1P'
           feats_cells = strsplit(val, ',');
           feats = [];
           for f = 1:length(feats_cells)
               feats = [feats str2num(feats_cells{f})];
           end
-          ftsParams.featsWeights = feats;
-      case 'VEC_FEATURES'
+          ftsParams.feats1p = feats;
+      case 'FEATURES_2P'
           feats_cells = strsplit(val, ',');
           feats = [];
           for f = 1:length(feats_cells)
               feats = [feats str2num(feats_cells{f})];
           end
-          ftsParams.vectorize = feats;
+          ftsParams.feats2p = feats;
       case 'ON_STATS'
         feats_cells = strsplit(val, ',');
         feats = [];

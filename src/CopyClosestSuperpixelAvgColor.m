@@ -13,7 +13,7 @@ for i = 1:length(neighbor_idxs)
   %Prototype color transfer (Superpixel average)
   for c = 2:3
     mask_c = source.lab(:,:,c).*src_mask;
-    avg_sp = sum(sum(mask_c))/length(find(src_mask));
+    avg_sp = sum(mask_c(:))/length(find(src_mask));
     lab_out(:,:,c) = lab_out(:,:,c) + avg_sp*tgt_mask;
   end
 end
