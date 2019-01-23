@@ -1,9 +1,9 @@
 ## Beyond Landscapes: An Exemplar-based Image colorization method ##
 [Saulo Pereira](https://github.com/saulo-p)
 
-![Results1](https://github.com/saulo-p/ImageColorization/tree/master/results/results1.jpg)
-![Results2](https://github.com/saulo-p/ImageColorization/tree/master/results/results3.jpg)
-![Results3](https://github.com/saulo-p/ImageColorization/tree/master/results/results4.jpg)
+![Results1](https://github.com/saulo-p/ImageColorization/blob/master/results/results1.png)
+![Results2](https://github.com/saulo-p/ImageColorization/blob/master/results/results3.jpg)
+![Results3](https://github.com/saulo-p/ImageColorization/blob/master/results/results4.jpg)
 
 ### Overview ###
 This repository contains the source code for my proposed colorization method.
