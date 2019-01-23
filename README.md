@@ -2,8 +2,8 @@
 [Saulo Pereira](https://github.com/saulo-p)
 
 ![Results1](https://github.com/saulo-p/ImageColorization/blob/master/results/results1.png)
-![Results2](https://github.com/saulo-p/ImageColorization/blob/master/results/results3.jpg)
-![Results3](https://github.com/saulo-p/ImageColorization/blob/master/results/results4.jpg)
+![Results2](https://github.com/saulo-p/ImageColorization/blob/master/results/results3.png)
+![Results3](https://github.com/saulo-p/ImageColorization/blob/master/results/results4.png)
 
 ### Overview ###
 This repository contains the source code for my proposed colorization method.
