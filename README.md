@@ -12,11 +12,20 @@ It consists of an exemplar-based method which is based on a classification frame
 It was built upon the project I forked from, but at this stage it holds no resemblance.  
 
 The method's pipeline includes third party code:
-* The superpixel segmentation <Turbo>
-* The saliency maps in <Saliency>
-* Histogram matching functions 
-* The scribble propagation algorithm <Levin>
-* Parts from the colorization algorithm of <Gupta>
+* The superpixel segmentation in:
+> Levinshtein, A., Stere, A., Kutulakos, K. N., Fleet, D. J., Dickinson, S. J., & Siddiqi, K. (2009). Turbopixels: Fast superpixels using geometric flows
+
+* The saliency maps in:
+> Yang, C., Zhang, L., Lu, H., Ruan, X., & Yang, M. H. (2013). Saliency detection via graph-based manifold ranking.
+
+* Histogram matching functions
+> http://cvhci.anthropomatik.kit.edu/~bschauer/
+
+* The scribble propagation algorithm:
+> Levin, A., Lischinski, D., & Weiss, Y. (2004, August). Colorization using optimization.
+
+* Parts from the colorization algorithm of:
+> Gupta, R. K., Chia, A. Y. S., Rajan, D., Ng, E. S., & Zhiyong, H. (2012, October). Image colorization using similar images
 
 
 #### Usage ####
